@@ -1,0 +1,59 @@
+version: "3.6"
+services:
+  coincap_redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.11
+    container_name: coincap_redpanda
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - "1"
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://coincap_redpanda:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr
+      - PLAINTEXT://0.0.0.0:28082,OUTSIDE://0.0.0.0:8082
+      - --advertise-pandaproxy-addr
+      - PLAINTEXT://coincap_redpanda:28082,OUTSIDE://localhost:8082
+      - --rpc-addr
+      - 0.0.0.0:33145
+      - --advertise-rpc-addr
+      - coincap_redpanda:33145
+    environment:
+      KAFKA_CREATE_TOPICS:
+    ports:
+      # - 8081:8081
+      - 8082:8082
+      - 9092:9092
+      - 9644:9644
+      - 28082:28082
+      - 29092:29092
+
+  coincap_redpanda_console:
+    image: docker.redpanda.com/redpandadata/console:v2.4.6
+    container_name: coincap_redpanda_console
+    entrypoint: /bin/sh
+    command: -c "echo \"$$CONSOLE_CONFIG_FILE\" > /tmp/config.yml; /app/console"
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["coincap_redpanda:29092"]
+          schemaRegistry:
+            enabled: false
+        redpanda:
+          adminApi:
+            enabled: true
+            urls: ["http://coincap_redpanda:9644"]
+        connect:
+          enabled: false
+    ports:
+      - 1003:8080
+    depends_on:
+      - coincap_redpanda

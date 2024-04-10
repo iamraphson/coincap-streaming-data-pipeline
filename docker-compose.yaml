@@ -1,0 +1,10 @@
+version: "3.6"
+services:
+  coincap_redpanda:
+    extends:
+      file: ./Redpanda/docker-compose.yaml
+      service: coincap_redpanda
+  coincap_redpanda_console:
+    extends:
+      file: ./Redpanda/docker-compose.yaml
+      service: coincap_redpanda_console
