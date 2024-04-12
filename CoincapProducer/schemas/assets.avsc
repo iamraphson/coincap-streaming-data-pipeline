@@ -1,0 +1,10 @@
+{
+    "namespace":  "io.coincap",
+    "type": "record",
+    "name": "assets",
+    "fields": [
+        {"name": "bitcoin", "type": ["string", "null"]},
+        {"name": "ethereum", "type": ["string", "null"]},
+        {"name": "collected_at", "type": "string"}
+    ]
+}

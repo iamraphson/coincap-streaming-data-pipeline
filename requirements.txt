@@ -1,0 +1,4 @@
+avro==1.11.3
+kafka-python==2.0.2
+pyspark==3.5.1
+websocket-client==1.7.0

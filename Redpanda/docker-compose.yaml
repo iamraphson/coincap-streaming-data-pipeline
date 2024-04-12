@@ -28,7 +28,7 @@ services:
     environment:
       KAFKA_CREATE_TOPICS:
     ports:
-      # - 8081:8081
+      - 8081:8081
       - 8082:8082
       - 9092:9092
       - 9644:9644
@@ -46,7 +46,8 @@ services:
         kafka:
           brokers: ["coincap_redpanda:29092"]
           schemaRegistry:
-            enabled: false
+            enabled: true
+            urls: ["http://coincap_redpanda:8081"]
         redpanda:
           adminApi:
             enabled: true

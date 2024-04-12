@@ -8,3 +8,11 @@ services:
     extends:
       file: ./Redpanda/docker-compose.yaml
       service: coincap_redpanda_console
+  coincap_producer:
+    build:
+      context: ./CoincapProducer
+      dockerfile: Dockerfile
+    container_name: coincap_producer
+    environment:
+      REDPANDA_BROKERS: "coincap_redpanda:29092"
+      ASSET_PRICES_TOPIC: "$ASSET_PRICES_TOPIC"
