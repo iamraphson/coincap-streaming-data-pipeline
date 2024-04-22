@@ -10,12 +10,13 @@ from kafka import KafkaProducer, errors
 class CoincapProducer:
     def __init__(self) -> None:
         self.asset_avro_schema = self.load_schema('./schemas/assets.avsc')
-        self.asset_topic = os.environ['ASSET_PRICES_TOPIC']
+        self.asset_topic = os.environ.get('ASSET_PRICES_TOPIC', 'data.asset_prices')
+        self.asset_topic_plain = 'data.asset_prices_plain'
 
         config = {
-            'bootstrap_servers': os.environ['REDPANDA_BROKERS'].split(',')
+            'bootstrap_servers': os.environ.get('REDPANDA_BROKERS', 'localhost:9092').split(',')
         }
-        print('kakfa', self.asset_topic, config)
+
         self.producer = KafkaProducer(**config)
 
         websocket.enableTrace(True)
@@ -42,16 +43,18 @@ class CoincapProducer:
 
     def on_message(self, ws, message) -> None:
         print('### message ###')
-        assetsPrice = json.loads(message)
-        print({**assetsPrice, 'collected_at': dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+        assets = json.loads(message)
+        for asset, price in assets.items():
+            print('asset', asset, price)
+            payload = {
+                'asset_name': asset,
+                'asset_price': price,
+                'collected_at': dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
 
-        encoded_data = self.encode_message({
-            'bitcoin': assetsPrice.get('bitcoin'),
-            'ethereum': assetsPrice.get('ethereum'),
-            'collected_at': dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }, self.asset_avro_schema)
-
-        self.publish_asset_prices(encoded_data)
+            self.publish_asset_prices_plain(json.dumps(payload, default=str).encode('utf-8'))
+            encoded_data = self.encode_message(payload, self.asset_avro_schema)
+            self.publish_asset_prices(encoded_data)
 
 
     def load_schema(self, schema_path):
@@ -72,6 +75,14 @@ class CoincapProducer:
             print('Kafka error', e.__str__())
         except Exception as e:
             print('Error occuring during kafka production', e.__str__())
+
+    def publish_asset_prices_plain(self, value):
+        try:
+            self.producer.send(topic=self.asset_topic_plain, value=value)
+        except errors.KafkaTimeoutError as e:
+            print('Kafka error', e.__str__())
+        except Exception as e:
+            print('Error occuring during kafka production plain', e.__repr__())
 
 
 if __name__ == "__main__":

@@ -1,18 +1,43 @@
 version: "3.6"
 services:
-  coincap_redpanda:
+  coincap-redpanda:
     extends:
       file: ./Redpanda/docker-compose.yaml
-      service: coincap_redpanda
-  coincap_redpanda_console:
+      service: coincap-redpanda
+
+  coincap-redpanda-console:
     extends:
       file: ./Redpanda/docker-compose.yaml
-      service: coincap_redpanda_console
-  coincap_producer:
+      service: coincap-redpanda-console
+
+  coincap-producer:
     build:
       context: ./CoincapProducer
       dockerfile: Dockerfile
-    container_name: coincap_producer
+    container_name: coincap-producer
     environment:
-      REDPANDA_BROKERS: "coincap_redpanda:29092"
+      REDPANDA_BROKERS: "coincap-redpanda:29092"
       ASSET_PRICES_TOPIC: "$ASSET_PRICES_TOPIC"
+    depends_on:
+      - coincap-redpanda
+
+  coincap-consumer:
+    extends:
+      file: ./CoincapConsumer/docker-compose.yaml
+      service: coincap-consumer
+    environment:
+      REDPANDA_BROKERS: "coincap-redpanda:29092"
+      ASSET_PRICES_TOPIC: "$ASSET_PRICES_TOPIC"
+      ASSET_SCHEMA_LOCATION: "/src/schemas/assets.avsc"
+    depends_on:
+      - coincap-redpanda
+
+  coincap-consumer-worker-1:
+    extends:
+      file: ./CoincapConsumer/docker-compose.yaml
+      service: coincap-consumer-worker-1
+
+  coincap-consumer-worker-2:
+    extends:
+      file: ./CoincapConsumer/docker-compose.yaml
+      service: coincap-consumer-worker-2

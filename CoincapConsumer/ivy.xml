@@ -1,0 +1,15 @@
+<ivy-module version="2.0">
+  <info organisation="org.apache.spark" module="cooincap-consumer" />
+
+  <configurations>
+    <conf name="default"/>
+    <conf name="sources" visibility="private"/>
+    <conf name="javadoc" visibility="private"/>
+  </configurations>
+
+  <dependencies>
+    <dependency org="org.apache.spark" name="spark-sql-kafka-0-10_2.12" rev="3.5.1" conf="default"/>
+    <dependency org="org.apache.spark" name="spark-avro_2.12" rev="3.5.1" conf="default"/>
+    <dependency org="org.apache.spark" name="spark-sql_2.12" rev="3.5.1" conf="default->master"/>
+  </dependencies>
+</ivy-module>
