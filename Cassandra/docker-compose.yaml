@@ -1,7 +1,4 @@
 version: "3.6"
-volumes:
-  cassandra_data:
-    driver: local
 services:
   coincap-cassandra:
     build:

@@ -1,6 +1,13 @@
 version: "3.6"
 volumes:
   cassandra_data:
+    driver: local
+  grafana-data:
+    driver: local
+  grafana-log:
+    driver: local
+  grafana-config:
+    driver: local
 
 services:
   coincap-redpanda:
@@ -14,30 +21,14 @@ services:
       service: coincap-redpanda-console
 
   coincap-producer:
-    build:
-      context: ./CoincapProducer
-      dockerfile: Dockerfile
-    container_name: coincap-producer
-    environment:
-      REDPANDA_BROKERS: "coincap-redpanda:29092"
-      ASSET_PRICES_TOPIC: "$ASSET_PRICES_TOPIC"
-    depends_on:
-      coincap-redpanda:
-        condition: service_healthy
+    extends:
+        file: ./CoincapProducer/docker-compose.yaml
+        service: coincap-producer
 
   coincap-consumer:
     extends:
       file: ./CoincapConsumer/docker-compose.yaml
       service: coincap-consumer
-    environment:
-      REDPANDA_BROKERS: "coincap-redpanda:29092"
-      ASSET_PRICES_TOPIC: "$ASSET_PRICES_TOPIC"
-      ASSET_SCHEMA_LOCATION: "/src/schemas/assets.avsc"
-    depends_on:
-      coincap-redpanda:
-        condition: service_healthy
-      coincap-cassandra:
-        condition: service_healthy
 
   coincap-consumer-worker-1:
     extends:
@@ -58,3 +49,8 @@ services:
     extends:
       file: ./Cassandra/docker-compose.yaml
       service: coincap-cassandra-init
+  
+  coincap-grafana:
+    extends:
+      file: ./Grafana/docker-compose.yaml
+      service: coincap-grafana

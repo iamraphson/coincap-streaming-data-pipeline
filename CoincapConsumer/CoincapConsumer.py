@@ -24,17 +24,17 @@ class CoincapConsumer:
     def __init__(self) -> None:
         self.spark = SparkSession.builder \
             .appName('coincap-consumer') \
-            .config("spark.cassandra.connection.host", "coincap-cassandra") \
-            .config("spark.cassandra.connection.port", "9042") \
-            .config("spark.cassandra.auth.username", "adminadmin") \
-            .config("spark.cassandra.auth.password", "adminadmin") \
+            .config("spark.cassandra.connection.host", os.environ.get('ASSET_CASSANDRA_HOST', 'localhost')) \
+            .config("spark.cassandra.connection.port", os.environ.get('ASSET_CASSANDRA_PORT', 9042)) \
+            .config("spark.cassandra.auth.username", os.environ.get('ASSET_CASSANDRA_USERNAME')) \
+            .config("spark.cassandra.auth.password", os.environ.get('ASSET_CASSANDRA_PASSWORD')) \
             .getOrCreate()
 
         self.spark.sparkContext.setLogLevel('WARN')
 
 
     def read_from_kafka(self, topic: str):
-        return self.spark \
+        self.df_raw_stream = self.spark \
             .readStream \
             .format("kafka") \
             .option("kafka.bootstrap.servers", os.environ.get('REDPANDA_BROKERS', 'localhost:9092')) \
@@ -42,11 +42,11 @@ class CoincapConsumer:
             .option("startingOffsets", "latest") \
             .load()
 
-    def parse_avro_message_4rm_kafka(self, df_stream):
+    def parse_avro_message_4rm_kafka(self):
         decode_asset_avro_message_udf = func.udf(decode_asset_avro_message, returnType=T.MapType(T.StringType(), T.StringType()))
-        df_value_stream = df_stream.selectExpr('value')
+        df_value_stream = self.df_raw_stream.selectExpr('value')
 
-        return df_value_stream.withColumn("decoded_aseet_data", decode_asset_avro_message_udf(func.col('value'))) \
+        self.df_pure_stream = df_value_stream.withColumn("decoded_aseet_data", decode_asset_avro_message_udf(func.col('value'))) \
             .select('decoded_aseet_data', func.explode("decoded_aseet_data")) \
             .select('decoded_aseet_data.id','decoded_aseet_data.asset_name', 'decoded_aseet_data.asset_price', 'decoded_aseet_data.collected_at') \
             .withColumn('asset_price', func.col('asset_price').cast('float')) \
@@ -55,8 +55,8 @@ class CoincapConsumer:
             )
     
 
-    def sink_console(self, df_stream, output_mode: str = 'complete', processing_time: str = '10 seconds'):
-        df_stream.writeStream \
+    def sink_console(self, output_mode: str = 'complete', processing_time: str = '10 seconds'):
+        self.df_pure_stream.writeStream \
             .outputMode(output_mode) \
             .trigger(processingTime=processing_time) \
             .format("console") \
@@ -64,12 +64,12 @@ class CoincapConsumer:
             .start()
         
 
-    def sink_into_elasticsearch(self, df_stream, output_mode: str = 'complete'):
+    def sink_into_elasticsearch(self, output_mode: str = 'complete'):
         """
             Sad news, i can't use ES becuase the depanienes are not working with Spark 3.5.0 or 3.5.1
             https://github.com/elastic/elasticsearch-hadoop/issues/2210
         """
-        df_stream.writeStream \
+        self.df_pure_stream.writeStream \
             .outputMode(output_mode) \
             .format("org.elasticsearch.spark.sql") \
             .option("checkpointLocation", "checkpoint_location") \
@@ -80,13 +80,17 @@ class CoincapConsumer:
             .option("es.resource", "assets/_doc") \
             .start()
 
-    def sink_into_cassandra(self, df_stream, output_mode: str = 'complete'):
-        df_stream.writeStream \
+    def sink_into_cassandra(self, output_mode: str = 'complete'):
+        print('Writing to Cassandra')
+        self.df_pure_stream.writeStream \
             .format('org.apache.spark.sql.cassandra') \
             .option('checkpointLocation', 'checkpoint_location') \
-            .options(table='assets', keyspace='assets') \
+            .options(
+                table=os.environ.get('ASSET_CASSANDRA_TABLE'), 
+                keyspace=os.environ.get('ASSET_CASSANDRA_KEYSPACE')
+            ) \
             .outputMode(output_mode) \
-            .option('ttl', '300') \
+            .option('ttl', '86400') \
             .start()
     
     def waitingForTermination(self):
@@ -96,12 +100,12 @@ class CoincapConsumer:
 if __name__ == "__main__":
     consumer = CoincapConsumer()
 
-    df_raw_stream= consumer.read_from_kafka(topic=os.environ.get('ASSET_PRICES_TOPIC', 'data.asset_prices'))
-    df_stream = consumer.parse_avro_message_4rm_kafka(df_stream=df_raw_stream)
+    consumer.read_from_kafka(topic=os.environ.get('ASSET_PRICES_TOPIC', 'data.asset_prices'))
+    df_stream = consumer.parse_avro_message_4rm_kafka()
 
-    #consumer.sink_console(df_stream=df_stream,output_mode='append')
-    #consumer.sink_into_elasticsearch(df_stream=df_stream,output_mode='append')
-    consumer.sink_into_cassandra(df_stream=df_stream,output_mode='append')
+    #consumer.sink_console(output_mode='append')
+    #consumer.sink_into_elasticsearch(output_mode='append')
+    consumer.sink_into_cassandra(output_mode='append')
 
     consumer.waitingForTermination()
 

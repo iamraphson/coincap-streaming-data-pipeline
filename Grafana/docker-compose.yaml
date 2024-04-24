@@ -1,0 +1,14 @@
+version: "3.6"
+services:
+  coincap-grafana:
+    image: grafana/grafana-enterprise
+    container_name: coincap-grafana
+    depends_on:
+      coincap-cassandra:
+        condition: service_healthy
+    ports:
+      - 1244:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - grafana-log:/var/log/grafana
+      - grafana-config:/etc/grafana

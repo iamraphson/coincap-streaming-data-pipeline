@@ -6,9 +6,24 @@ services:
       dockerfile: SparkMaster.DockerFile
     container_name: coincap-consumer
     ports:
-      - "9090:8080"
-      - "7014:7077"
-      - "4010:4040"
+      - 9090:8080
+      - 7014:7077
+      - 4010:4040
+    environment:
+      REDPANDA_BROKERS: "coincap-redpanda:29092"
+      ASSET_PRICES_TOPIC: "data.asset_prices"
+      ASSET_SCHEMA_LOCATION: "/src/schemas/assets.avsc"
+      ASSET_CASSANDRA_HOST: "coincap-cassandra"
+      ASSET_CASSANDRA_PORT: 9042
+      ASSET_CASSANDRA_USERNAME: "adminadmin"
+      ASSET_CASSANDRA_PASSWORD: "adminadmin"
+      ASSET_CASSANDRA_KEYSPACE: 'assets'
+      ASSET_CASSANDRA_TABLE: 'assets'
+    depends_on:
+      coincap-redpanda:
+        condition: service_healthy
+      coincap-cassandra:
+        condition: service_healthy
 
   coincap-consumer-worker-1:
     build:
@@ -22,7 +37,7 @@ services:
     environment:
       SPARK_MODE: worker
       SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_MEMORY: 1g
       SPARK_MASTER_URL: spark://coincap-consumer:7077
 
   coincap-consumer-worker-2:
@@ -37,5 +52,5 @@ services:
     environment:
       SPARK_MODE: worker
       SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_MEMORY: 1g
       SPARK_MASTER_URL: spark://coincap-consumer:7077

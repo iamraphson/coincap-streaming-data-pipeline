@@ -12,7 +12,6 @@ class CoincapProducer:
     def __init__(self) -> None:
         self.asset_avro_schema = self.load_schema('./schemas/assets.avsc')
         self.asset_topic = os.environ.get('ASSET_PRICES_TOPIC', 'data.asset_prices')
-        self.asset_topic_plain = 'data.asset_prices_plain'
 
         config = {
             'bootstrap_servers': os.environ.get('REDPANDA_BROKERS', 'localhost:9092').split(',')
@@ -22,7 +21,7 @@ class CoincapProducer:
 
         websocket.enableTrace(True)
         self.ws = websocket.WebSocketApp(
-            'wss://ws.coincap.io/prices?assets=bitcoin,ethereum',
+            'wss://ws.coincap.io/prices?assets=bitcoin,ethereum,binance-coin',
             on_open=self.on_open,
             on_message=self.on_message,
             on_error=self.on_error,
@@ -54,7 +53,6 @@ class CoincapProducer:
                 'collected_at': dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
 
-            self.publish_asset_prices_plain(json.dumps(payload, default=str).encode('utf-8'))
             encoded_data = self.encode_message(payload, self.asset_avro_schema)
             self.publish_asset_prices(encoded_data)
 
@@ -76,16 +74,7 @@ class CoincapProducer:
         except errors.KafkaTimeoutError as e:
             print('Kafka error', e.__str__())
         except Exception as e:
-            print('Error occuring during kafka production', e.__str__())
-
-    def publish_asset_prices_plain(self, value):
-        try:
-            self.producer.send(topic=self.asset_topic_plain, value=value)
-        except errors.KafkaTimeoutError as e:
-            print('Kafka error', e.__str__())
-        except Exception as e:
-            print('Error occuring during kafka production plain', e.__repr__())
-
+            print('Error occurred during kafka publishinh', e.__str__())
 
 if __name__ == "__main__":
     CoincapProducer()
