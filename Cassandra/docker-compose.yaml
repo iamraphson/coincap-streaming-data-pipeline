@@ -1,0 +1,35 @@
+version: "3.6"
+volumes:
+  cassandra_data:
+    driver: local
+services:
+  coincap-cassandra:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cassandra:latest
+    container_name: coincap-cassandra
+    ports:
+      - 9042:9042
+    environment:
+      - CASSANDRA_CLUSTER_NAME=conincap_cluster
+      - CASSANDRA_USER=adminadmin
+      - CASSANDRA_PASSWORD=adminadmin
+      - CASSANDRA_DC=dc1
+      - CASSANDRA_RACK=rack1
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESC KEYSPACES'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+  
+  coincap-cassandra-init:
+    image: cassandra:latest
+    container_name: coincap-cassandra-init
+    depends_on:
+      coincap-cassandra:
+        condition: service_healthy
+    command: /bin/bash -c "cqlsh coincap-cassandra -u adminadmin -p adminadmin -f /init.cql"
+

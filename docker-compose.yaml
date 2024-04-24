@@ -1,4 +1,7 @@
 version: "3.6"
+volumes:
+  cassandra_data:
+
 services:
   coincap-redpanda:
     extends:
@@ -19,7 +22,8 @@ services:
       REDPANDA_BROKERS: "coincap-redpanda:29092"
       ASSET_PRICES_TOPIC: "$ASSET_PRICES_TOPIC"
     depends_on:
-      - coincap-redpanda
+      coincap-redpanda:
+        condition: service_healthy
 
   coincap-consumer:
     extends:
@@ -30,7 +34,10 @@ services:
       ASSET_PRICES_TOPIC: "$ASSET_PRICES_TOPIC"
       ASSET_SCHEMA_LOCATION: "/src/schemas/assets.avsc"
     depends_on:
-      - coincap-redpanda
+      coincap-redpanda:
+        condition: service_healthy
+      coincap-cassandra:
+        condition: service_healthy
 
   coincap-consumer-worker-1:
     extends:
@@ -41,3 +48,13 @@ services:
     extends:
       file: ./CoincapConsumer/docker-compose.yaml
       service: coincap-consumer-worker-2
+
+  coincap-cassandra:
+    extends:
+      file: ./Cassandra/docker-compose.yaml
+      service: coincap-cassandra
+  
+  coincap-cassandra-init:
+    extends:
+      file: ./Cassandra/docker-compose.yaml
+      service: coincap-cassandra-init

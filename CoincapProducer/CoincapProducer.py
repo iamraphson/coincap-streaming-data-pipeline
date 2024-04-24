@@ -6,6 +6,7 @@ import avro.io
 import io
 import os
 from kafka import KafkaProducer, errors
+import uuid
 
 class CoincapProducer:
     def __init__(self) -> None:
@@ -44,9 +45,10 @@ class CoincapProducer:
     def on_message(self, ws, message) -> None:
         print('### message ###')
         assets = json.loads(message)
+        print('assets', assets)
         for asset, price in assets.items():
-            print('asset', asset, price)
             payload = {
+                'id': f'{str(uuid.uuid4())}',
                 'asset_name': asset,
                 'asset_price': price,
                 'collected_at': dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")

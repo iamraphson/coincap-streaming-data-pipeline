@@ -3,6 +3,7 @@
     "type": "record",
     "name": "assets",
     "fields": [
+        {"name": "id", "type": "string"},
         {"name": "asset_name", "type": "string"},
         {"name": "asset_price", "type": "string"},
         {"name": "collected_at", "type": "string"}

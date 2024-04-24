@@ -34,6 +34,12 @@ services:
       - 9644:9644
       - 28082:28082
       - 29092:29092
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
   coincap-redpanda-console:
     image: docker.redpanda.com/redpandadata/console:v2.4.6
@@ -57,4 +63,5 @@ services:
     ports:
       - 1003:8080
     depends_on:
-      - coincap-redpanda
+      coincap-redpanda:
+        condition: service_healthy
