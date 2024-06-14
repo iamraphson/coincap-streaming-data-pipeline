@@ -57,3 +57,10 @@ ASSET_PRICES_TOPIC=data.asset_prices
 - Run `docker-compose up` .
 - Access the Grafana dashboard by visiting `http://localhost:1244/` in your web browser. 
 - Import `./Grafana/dashboard.json` into Grafana to view the dashboard.
+
+
+## Contact
+
+Twitter: [@iamraphson](https://twitter.com/iamraphson)
+
+🦅
